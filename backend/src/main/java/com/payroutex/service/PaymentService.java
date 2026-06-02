@@ -30,8 +30,22 @@ public class PaymentService {
 
         List<Gateway> activeGateways = gatewayRepository.findByStatus("ACTIVE");
 
+        // If all gateways are down, save failed transaction
         if (activeGateways.isEmpty()) {
-            throw new RuntimeException("No active payment gateway available");
+
+            Transaction failedTransaction = Transaction.builder()
+                    .customerName(request.getCustomerName())
+                    .amount(request.getAmount())
+                    .paymentMethod(request.getPaymentMethod().toUpperCase())
+                    .bankName(request.getBankName())
+                    .selectedGateway("NONE")
+                    .fallbackGateway(null)
+                    .status("FAILED")
+                    .reason("Payment failed because all gateways are down")
+                    .createdAt(LocalDateTime.now())
+                    .build();
+
+            return transactionRepository.save(failedTransaction);
         }
 
         List<Gateway> sortedGateways = activeGateways.stream()
